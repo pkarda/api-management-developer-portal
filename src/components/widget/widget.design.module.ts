@@ -22,7 +22,7 @@ export class WidgetDesignModule implements IInjectorModule {
             displayName: "Custom widget 1",
             category: "Advanced",
             iconUrl: "https://...",
-            defaultConfig: { field1: "bla-bla", field2: "bla-bla" }
+            defaultConfig: { count: 0 }
         }));
 
         injector.bindInstanceToCollection("widgetHandlers", new WidgetHandlers({
@@ -30,7 +30,7 @@ export class WidgetDesignModule implements IInjectorModule {
             displayName: "Custom widget 2",
             category: "Advanced",
             iconUrl: "https://...",
-            defaultConfig: { field1: "bla-bla", field2: "bla-bla" }
+            defaultConfig: { count: 0 }
         }));
     }
 }
