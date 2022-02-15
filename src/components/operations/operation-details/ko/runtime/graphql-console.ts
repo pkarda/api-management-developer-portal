@@ -20,6 +20,7 @@ import { ISettingsProvider } from "@paperbits/common/configuration";
 import { ResponsePackage } from "./responsePackage";
 import { Utils } from "../../../../../utils";
 import { GraphDocService } from "./graphql-documentation/graphql-doc-service";
+import { LogItem, WebsocketClient } from "./websocketClient";
 
 function getType(type: GraphQL.GraphQLOutputType | GraphQL.GraphQLInputType) {
     while ((type instanceof GraphQL.GraphQLList) || (type instanceof GraphQL.GraphQLNonNull)) {
@@ -66,6 +67,11 @@ export class GraphqlConsole {
     public readonly contentParseErrors: ko.Observable<string>;
     public backendUrl: string;
 
+    public readonly wsConnected: ko.Observable<boolean>;
+    public readonly wsProcessing: ko.Observable<boolean>;
+    private ws: WebsocketClient;
+    public readonly wsLogItems: ko.ObservableArray<object>;
+
     constructor(
         private readonly routeHelper: RouteHelper,
         private readonly apiService: ApiService,
@@ -95,6 +101,35 @@ export class GraphqlConsole {
         this.mutationNode = ko.observable();
         this.subscriptionNode = ko.observable();
         this.node = ko.observable();
+        this.wsConnected = ko.observable(false);
+        this.wsProcessing = ko.observable(false);
+        this.wsLogItems = ko.observableArray([
+            {
+                "logTime": "12:50:07.532",
+                "logData": "Disconnected",
+                "logType": "Connection"
+            },
+            {
+                "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"Operator\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
+                "logTime": "12:47:35.567",
+                "logType": "GetData"
+            },
+            {
+                "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"Admin\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
+                "logTime": "12:46:28.436",
+                "logType": "GetData"
+            },
+            {
+                "logTime": "12:38:14.612",
+                "logData": "Connected",
+                "logType": "Connection"
+            },
+            {
+                "logTime": "12:38:14.369",
+                "logData": "Connecting to wss://jbtests-apimanagement.azure-api.net/",
+                "logType": "Connection"
+            }
+        ]);
     }
 
     @Param()
@@ -532,4 +567,41 @@ export class GraphqlConsole {
     public collapse(collapsible: string): void {
         this[collapsible](!this[collapsible]());
     }
+
+    public isSubscription(): boolean {
+        return this.queryType() == GraphqlTypesForDocumentation.subscription;
+    }
+
+    public closeConnections(): void {
+        if(this.wsConnected()) {
+            this.closeWsConnection();
+        }
+    }
+
+    public async closeWsConnection(): Promise<void> {
+        this.wsProcessing(true);
+
+        //TODO close the websocket connection
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        this.wsProcessing(false);
+        this.wsConnected(false);
+    }
+
+    public async wsConnect(): Promise<void> {
+        this.wsProcessing(true);
+
+        //TODO Implement ws connection
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        this.wsProcessing(false);
+        this.wsConnected(true);
+    }
+
+    public clearLogs(): void {
+        this.wsLogItems([]);
+        //this.ws?.clearLogs();
+    }
+
+    
 }

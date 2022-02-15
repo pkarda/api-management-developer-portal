@@ -1,0 +1,17 @@
+.table-ws-gql {
+    display: grid;
+    max-width: 100%;
+    overflow-x: auto;
+    margin-bottom: 20px;
+
+    &.logs {
+        grid-template-columns: auto auto 1fr;
+        background: white;
+    
+        & > .d-contents > .d-contents > div {
+            padding: 4px;
+            vertical-align: middle;
+        }
+    }
+}
+
