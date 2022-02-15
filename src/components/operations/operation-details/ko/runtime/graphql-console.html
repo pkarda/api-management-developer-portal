@@ -8,7 +8,7 @@
 
 <div class="panel panel-dark animation-fade-in">
     <button type="button" class="no-border pull-right" data-dismiss="modal" aria-label="Close console"
-        data-bind="click: $parent.closeConsole">
+        data-bind="click: () => { closeConnections(); $parent.closeConsole();}">
         <i class="icon-emb icon-emb-simple-remove"></i>
     </button>
 
@@ -130,6 +130,8 @@
             <div class="query-variable" id="variablesEditor"></div>
             <div class="flex flex-column align-items-end">
                 <div class="btn-group margin-top-send" role="group">
+                    <!-- ko ifnot: isSubscription() -->
+
                     <!-- ko ifnot: $component.sendingRequest()-->
                     <button type="button" class="button button-primary btn-sm"
                         data-bind="click: validateAndSendRequest">
@@ -141,12 +143,81 @@
                         Sending...
                     </button>
                     <!-- /ko -->
+
+                    <!-- /ko -->
+
+                    <!-- ko if: isSubscription() -->
+
+                    <!-- ko ifnot: wsConnected -->
+                    <!-- ko ifnot: wsProcessing -->
+                    <button type="button" class="button button-primary btn-sm" data-bind="click: wsConnect">
+                        Connect
+                    </button>
+                    <!-- /ko -->
+                    <!-- ko if: wsProcessing -->
+                    <button type="button" class="button button-primary btn-sm" disabled>
+                        Connecting...
+                    </button>
+                    <!-- /ko -->
+                    <!-- /ko -->
+
+                    <!-- ko if: wsConnected -->
+                    <!-- ko ifnot: wsProcessing -->
+                    <button type="button" class="button button-primary btn-sm" data-bind="click: closeWsConnection">
+                        Disconnect
+                    </button>
+                    <!-- /ko -->
+                    <!-- ko if: wsProcessing -->
+                    <button type="button" class="button button-primary btn-sm" disabled>
+                        Disconnecting...
+                    </button>
+                    <!-- /ko -->
+                    <!-- /ko -->
+
+                    <!-- /ko -->
+
                 </div>
             </div>
         </div>
         <div class="gql-response-grid">
             <h4>Response</h4>
+            <!-- ko ifnot: isSubscription() -->
             <div class="response-editor" id="responseEditor"></div>
+            <!-- /ko -->
+
+            <!-- ko if: isSubscription() -->
+            <div class="response-editor table-ws-gql logs">
+                <div class="d-contents" role="rowgroup">
+                    <div class="d-contents" role="row">
+                        <div role="columnheader" class="table-preset-head">Time</div>
+                        <div role="columnheader" class="table-preset-head"></div>
+                        <div role="columnheader" class="table-preset-head">Data</div>
+                    </div>
+                </div>
+                <div class="d-contents table-preset-v-scroll" role="rowgroup">
+                    <!-- ko foreach: { data: wsLogItems, as: 'item' } -->
+                    <div class="d-contents" role="row">
+                        <div role="cell" data-bind="text: item.logTime">
+                        </div>
+                        <div role="cell">
+                            <i data-bind="attr: { 'ws-log-type': item.logType }"></i>
+                        </div>
+                        <div role="cell" class="text-truncate" data-bind="text: item.logData">
+                        </div>
+                    </div>
+                    <!-- /ko -->
+                </div>
+            </div>
+
+            <div class="code-snippet">
+                <div class="code-snippet-heading">
+                    <button class="code-snippet-command" data-bind="click: clearLogs, disabled: sendingRequest"
+                        aria-label="Clear logs">
+                        <i class="icon-emb icon-emb-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+            <!-- /ko -->
         </div>
     </div>
 </div>

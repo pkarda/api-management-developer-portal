@@ -474,6 +474,7 @@
         </div>
         <div class="d-contents table-preset-v-scroll" role="rowgroup">
             <!-- ko foreach: { data: wsLogItems, as: 'item' } -->
+            <!-- ko if: $component.printAs($parent.wsLogItems()) -->
             <div class="d-contents" role="row">
                 <div role="cell" data-bind="text: item.logTime">
                 </div>
@@ -483,6 +484,7 @@
                 <div role="cell" class="text-truncate" data-bind="text: item.logData">
                 </div>
             </div>
+            <!-- /ko -->
             <!-- /ko -->
         </div>
     </div>

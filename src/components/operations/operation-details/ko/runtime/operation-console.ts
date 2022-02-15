@@ -608,4 +608,10 @@ export class OperationConsole {
         return this.routeHelper.getApiReferenceUrl(this.api().name);
     }
 
+    public printAs(list): boolean {
+        console.log("list")
+        console.log(list)
+        return true;
+    }
+
 }
