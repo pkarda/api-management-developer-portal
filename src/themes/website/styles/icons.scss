@@ -139,6 +139,10 @@
     content: "\e984";
 }
 
+.icon-emb-embrss:before {
+    content: "\ea9b";
+}
+
 .icon-svg-wadl {
     @include icon-18px();
     background-color: transparent;

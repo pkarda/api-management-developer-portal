@@ -71,6 +71,8 @@ export class GraphqlConsole {
     public readonly wsProcessing: ko.Observable<boolean>;
     private ws: WebsocketClient;
     public readonly wsLogItems: ko.ObservableArray<object>;
+    public readonly lastViewedNotifications: ko.Observable<number>;
+    
 
     constructor(
         private readonly routeHelper: RouteHelper,
@@ -103,33 +105,8 @@ export class GraphqlConsole {
         this.node = ko.observable();
         this.wsConnected = ko.observable(false);
         this.wsProcessing = ko.observable(false);
-        this.wsLogItems = ko.observableArray([
-            {
-                "logTime": "12:50:07.532",
-                "logData": "Disconnected",
-                "logType": "Connection"
-            },
-            {
-                "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"Operator\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
-                "logTime": "12:47:35.567",
-                "logType": "GetData"
-            },
-            {
-                "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"Admin\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
-                "logTime": "12:46:28.436",
-                "logType": "GetData"
-            },
-            {
-                "logTime": "12:38:14.612",
-                "logData": "Connected",
-                "logType": "Connection"
-            },
-            {
-                "logTime": "12:38:14.369",
-                "logData": "Connecting to wss://jbtests-apimanagement.azure-api.net/",
-                "logType": "Connection"
-            }
-        ]);
+        this.lastViewedNotifications = ko.observable();
+        this.wsLogItems = ko.observableArray([]);
     }
 
     @Param()
@@ -349,6 +326,14 @@ export class GraphqlConsole {
             }
             const responseStr = Buffer.from(response.body.buffer).toString();
             this.response(responseStr);
+            //Remove this example
+            if(this.wsConnected()) {
+                this.wsLogItems.push({
+                    "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"Operator\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
+                    "logTime": "12:47:35.567",
+                    "logType": "GetData"
+                })
+            }
         }
         catch (error) {
             if (error.code && error.code === "RequestError") {
@@ -568,6 +553,17 @@ export class GraphqlConsole {
         this[collapsible](!this[collapsible]());
     }
 
+    public typeChange(type: string): void {
+        if(this.queryType() == GraphqlTypesForDocumentation.subscription && type != GraphqlTypesForDocumentation.subscription) {
+            this.lastViewedNotifications(this.wsLogItems().length)
+        }
+        this.queryType(type);
+    }
+
+    public notifications(): number {
+        return (this.lastViewedNotifications()) ? this.wsLogItems().length - this.lastViewedNotifications(): 0;
+    }
+
     public isSubscription(): boolean {
         return this.queryType() == GraphqlTypesForDocumentation.subscription;
     }
@@ -583,6 +579,11 @@ export class GraphqlConsole {
 
         //TODO close the websocket connection
         await new Promise(resolve => setTimeout(resolve, 1000));
+        this.wsLogItems.push({
+            "logTime": "12:50:07.532",
+            "logData": "Disconnected",
+            "logType": "Connection"
+        })
         
         this.wsProcessing(false);
         this.wsConnected(false);
@@ -593,6 +594,16 @@ export class GraphqlConsole {
 
         //TODO Implement ws connection
         await new Promise(resolve => setTimeout(resolve, 1000));
+        this.wsLogItems.push({
+            "logTime": "12:38:14.369",
+            "logData": "Connecting to wss://jbtests-apimanagement.azure-api.net/",
+            "logType": "Connection"
+        });
+        this.wsLogItems.push({
+            "logTime": "12:38:14.612",
+            "logData": "Connected",
+            "logType": "Connection"
+        });
 
         this.wsProcessing(false);
         this.wsConnected(true);

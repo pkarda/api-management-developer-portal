@@ -87,7 +87,30 @@
 </div>
 
 <div class="panel panel-dark animation-fade-in panel-highlight flex-item flex-grow menu menu-horizontal">
+    <div class="gql-tabs">
+        <!-- ko foreach: { data: graphDocService.availableTypes, as: 'type' } -->
+        <!-- ko ifnot: type == 'Subscription' -->
+        <button
+            data-bind="text: type, click: () => {$component.typeChange(type)}, css: {active: $component.queryType() == type}">
+        </button>
+        <!-- /ko -->
+        <!-- ko if: type == 'Subscription' -->
+        <button
+            data-bind="click: () => {$component.typeChange(type)}, css: {active: $component.queryType() == type}">
+            <!-- ko if: $component.wsConnected -->
+            <i class="icon-emb icon-emb-embrss ws-connected blink" title="Connected"></i>
+            <!-- /ko -->
+            Subscription
+            <!-- ko if: $component.notifications() > 0 && $component.wsConnected && !$component.isSubscription() -->
+            <span class="ws-notifications" data-bind="text: $component.notifications()"></span>
+            <!-- /ko -->
+        </button>
+        <!-- /ko -->
+        <!-- /ko -->
+    </div>
     <div class="gql-container">
+        <!-- <select class="form-control"
+                    data-bind="options: graphDocService.availableTypes, value: queryType"></select> -->
         <div class="gql-explorer-grid">
             <h4>Explorer
                 <button class="no-border visible-collapse" data-bind="click: $component.collapse('collapsedExplorer')">
@@ -102,9 +125,6 @@
 
             <!-- ko ifnot: $component.collapsedExplorer -->
             <div class="menu menu-vertical d-block flex-item flex-grow animation-fade-in">
-                <select class="form-control"
-                    data-bind="options: graphDocService.availableTypes, value: queryType"></select>
-
                 <input class="form-control search" type="search" aria-label="Search" placeholder="Search operations"
                     spellcheck="false" data-bind="textInput: filter" />
 
