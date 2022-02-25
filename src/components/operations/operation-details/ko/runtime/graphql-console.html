@@ -214,7 +214,7 @@
                         <div role="columnheader" class="table-preset-head">Data</div>
                     </div>
                 </div>
-                <div class="d-contents table-preset-v-scroll" role="rowgroup">
+                <div class="d-contents" role="rowgroup">
                     <!-- ko foreach: { data: wsLogItems, as: 'item' } -->
                     <div class="d-contents" role="row">
                         <div role="cell" data-bind="text: item.logTime">
@@ -222,8 +222,13 @@
                         <div role="cell">
                             <i data-bind="attr: { 'ws-log-type': item.logType }"></i>
                         </div>
+                        <!-- ko if: item.logType == 'GetData' -->
+                        <pre data-bind="syntaxHighlight: { code: item.logData, language: 'json' }"></pre>
+                        <!-- /ko -->
+                        <!-- ko ifnot: item.logType == 'GetData' -->
                         <div role="cell" class="text-truncate" data-bind="text: item.logData">
                         </div>
+                        <!-- /ko -->
                     </div>
                     <!-- /ko -->
                 </div>
