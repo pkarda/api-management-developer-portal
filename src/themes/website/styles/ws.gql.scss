@@ -6,9 +6,10 @@
 
     &.logs {
         grid-template-columns: auto auto 1fr;
+        grid-auto-rows: max-content;
         background: white;
     
-        & > .d-contents > .d-contents > div {
+        & > .d-contents > .d-contents > :is(div, pre)  {
             padding: 4px;
             vertical-align: middle;
         }

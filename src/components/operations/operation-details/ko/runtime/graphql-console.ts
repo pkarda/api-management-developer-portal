@@ -329,7 +329,7 @@ export class GraphqlConsole {
             //Remove this example
             if(this.wsConnected()) {
                 this.wsLogItems.push({
-                    "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"Operator\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
+                    "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"string\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
                     "logTime": "12:47:35.567",
                     "logType": "GetData"
                 })
