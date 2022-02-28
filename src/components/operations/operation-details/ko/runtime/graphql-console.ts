@@ -326,11 +326,13 @@ export class GraphqlConsole {
             }
             const responseStr = Buffer.from(response.body.buffer).toString();
             this.response(responseStr);
+
             //Remove this example
-            if(this.wsConnected()) {
+            if(this.wsConnected() && this.queryType() == GraphqlTypesForDocumentation.mutation) {
+                let datetime = new Date()
                 this.wsLogItems.push({
-                    "logData": "{\"data\": {\"newUser\": {\"id\": \"94d597a3-9f17-4114-8e2d-063dc221dc82\", \"name\": \"string\", \"timestamp\": \"2022-02-15T18:17:21.715177+00:00\"}}}",
-                    "logTime": "12:47:35.567",
+                    "logData": this.response(),
+                    "logTime": datetime.toLocaleTimeString(),
                     "logType": "GetData"
                 })
             }
@@ -395,19 +397,27 @@ export class GraphqlConsole {
         loader.config({ paths: { vs: "/assets/monaco-editor/vs" } });
         loader.init().then(monaco => {
             this.initEditor(VariablesEditorSettings, this.variables);
-            this.initEditor(ResponseSettings, this.response);
+            if(!this.isSubscription()) {
+                this.initEditor(ResponseSettings, this.response);
+            }
             this.initEditor(QueryEditorSettings, this.document);
         });
     }
 
-    private initEditor(editorSettings, value: ko.Observable<string>): void {
+    private initEditor(editorSettings, editorValue: ko.Observable<string>): void {
 
         if (editorSettings.id === QueryEditorSettings.id) {
             setupGraphQLQueryIntellisense(this.schema);
         }
 
+        let formattedEditorValue = editorValue();
+
+        if (editorSettings.id === ResponseSettings.id) {
+            formattedEditorValue = Utils.formatJson(formattedEditorValue);
+        }
+
         const defaultSettings = {
-            value: value() || "",
+            value: formattedEditorValue || "",
             contextmenu: false,
             lineHeight: 17,
             automaticLayout: true,
@@ -554,10 +564,13 @@ export class GraphqlConsole {
     }
 
     public typeChange(type: string): void {
-        if(this.queryType() == GraphqlTypesForDocumentation.subscription && type != GraphqlTypesForDocumentation.subscription) {
-            this.lastViewedNotifications(this.wsLogItems().length)
+        if(this.isSubscription() && type != GraphqlTypesForDocumentation.subscription) {
+            this.lastViewedNotifications(this.wsLogItems().length);
+            this.queryType(type);
+            this.initEditor(ResponseSettings, this.response);
         }
-        this.queryType(type);
+        else 
+            this.queryType(type);
     }
 
     public notifications(): number {
@@ -579,8 +592,9 @@ export class GraphqlConsole {
 
         //TODO close the websocket connection
         await new Promise(resolve => setTimeout(resolve, 1000));
+        let datetime = new Date();
         this.wsLogItems.push({
-            "logTime": "12:50:07.532",
+            "logTime": datetime.toLocaleTimeString(),
             "logData": "Disconnected",
             "logType": "Connection"
         })
@@ -593,14 +607,16 @@ export class GraphqlConsole {
         this.wsProcessing(true);
 
         //TODO Implement ws connection
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        let datetime = new Date();
         this.wsLogItems.push({
-            "logTime": "12:38:14.369",
+            "logTime": datetime.toLocaleTimeString(),
             "logData": "Connecting to wss://jbtests-apimanagement.azure-api.net/",
             "logType": "Connection"
         });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        datetime = new Date();
         this.wsLogItems.push({
-            "logTime": "12:38:14.612",
+            "logTime": datetime.toLocaleTimeString(),
             "logData": "Connected",
             "logType": "Connection"
         });
