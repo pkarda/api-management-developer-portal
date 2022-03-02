@@ -183,7 +183,7 @@
 
                     <!-- ko if: wsConnected -->
                     <!-- ko ifnot: wsProcessing -->
-                    <button type="button" class="button button-primary btn-sm" data-bind="click: closeWsConnection">
+                    <button type="button" class="button button-primary btn-sm" data-bind="click: closeConnections">
                         Disconnect
                     </button>
                     <!-- /ko -->
@@ -225,7 +225,10 @@
                         <!-- ko if: item.logType == 'GetData' -->
                         <pre data-bind="syntaxHighlight: { code: item.logData, language: 'json' }"></pre>
                         <!-- /ko -->
-                        <!-- ko ifnot: item.logType == 'GetData' -->
+                        <!-- ko if: item.logType == 'SendData' -->
+                        <pre data-bind="syntaxHighlight: { code: item.logData, language: 'graphql' }"></pre>
+                        <!-- /ko -->
+                        <!-- ko ifnot: item.logType == 'GetData' || item.logType == 'SendData' -->
                         <div role="cell" class="text-truncate" data-bind="text: item.logData">
                         </div>
                         <!-- /ko -->
