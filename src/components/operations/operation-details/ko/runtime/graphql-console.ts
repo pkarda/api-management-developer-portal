@@ -72,6 +72,7 @@ export class GraphqlConsole {
     private ws: WebsocketClient;
     public readonly wsLogItems: ko.ObservableArray<object>;
     public readonly lastViewedNotifications: ko.Observable<number>;
+    public readonly fromTabChange: ko.Observable<boolean>;
     
 
     constructor(
@@ -105,6 +106,7 @@ export class GraphqlConsole {
         this.node = ko.observable();
         this.wsConnected = ko.observable(false);
         this.wsProcessing = ko.observable(false);
+        this.fromTabChange = ko.observable(false);
         this.lastViewedNotifications = ko.observable();
         this.wsLogItems = ko.observableArray([]);
     }
@@ -194,7 +196,11 @@ export class GraphqlConsole {
         if (this.editorUpdate) {
             this.queryEditor.setValue(document);
         }
+        if(this.isSubscription() && this.wsConnected() && !this.fromTabChange()) {
+            this.closeWsConnection(true);
+        }
         this.editorUpdate = true;
+        this.fromTabChange(false);
     }
 
     private onResponseChange(response: string): void {
@@ -437,7 +443,10 @@ export class GraphqlConsole {
                     this.isContentValid(true);
                     this.contentParseErrors(null);
                     clearTimeout(this.onContentChangeTimoutId);
-                    this.onContentChangeTimoutId = window.setTimeout(() => {
+                    this.onContentChangeTimoutId = window.setTimeout(async () => {
+                        if(this.isSubscription() && this.wsConnected()) {
+                            await this.closeWsConnection(true);
+                        }
                         this.tryParseGraphQLSchema(value);
                         if (this.isContentValid()) {
                             this.editorUpdate = false;
@@ -564,6 +573,7 @@ export class GraphqlConsole {
     }
 
     public typeChange(type: string): void {
+        this.fromTabChange(true);
         if(this.isSubscription() && type != GraphqlTypesForDocumentation.subscription) {
             this.lastViewedNotifications(this.wsLogItems().length);
             this.queryType(type);
@@ -587,12 +597,20 @@ export class GraphqlConsole {
         }
     }
 
-    public async closeWsConnection(): Promise<void> {
+    public async closeWsConnection(queryChanged = false): Promise<void> {
         this.wsProcessing(true);
 
         //TODO close the websocket connection
-        await new Promise(resolve => setTimeout(resolve, 1000));
         let datetime = new Date();
+        if(queryChanged) {
+            this.wsLogItems.push({
+                "logTime": datetime.toLocaleTimeString(),
+                "logData": "Disconnecting: Subscription Query has been updated",
+                "logType": "Connection"
+            })
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        datetime = new Date();
         this.wsLogItems.push({
             "logTime": datetime.toLocaleTimeString(),
             "logData": "Disconnected",
@@ -612,6 +630,11 @@ export class GraphqlConsole {
             "logTime": datetime.toLocaleTimeString(),
             "logData": "Connecting to wss://jbtests-apimanagement.azure-api.net/",
             "logType": "Connection"
+        });
+        this.wsLogItems.push({
+            "logTime": datetime.toLocaleTimeString(),
+            "logData": this.document(),
+            "logType": "SendData"
         });
         await new Promise(resolve => setTimeout(resolve, 1000));
         datetime = new Date();
