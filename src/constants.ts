@@ -208,6 +208,10 @@ export enum GraphqlFieldTypes {
     types = "_types"
 }
 
+export enum GraphqlMetaField {
+    typename = "__typename"
+}
+
 /**
  * Known setting names.
  */
@@ -216,7 +220,8 @@ export enum SettingNames {
     managementApiUrl = "managementApiUrl",
     managementApiAccessToken = "managementApiAccessToken",
     aadClientConfig = "aad",
-    aadB2CClientConfig = "aadB2C"
+    aadB2CClientConfig = "aadB2C",
+    developerPortalType = "developerPortalType"
 }
 
 /**
@@ -250,11 +255,6 @@ export enum GrantTypes {
 }
 
 export const managementApiVersion = "2021-04-01-preview";
-
-/**
- * Developer portal type (self-hosted or managed).
- */
-export const developerPortalType = "self-hosted-portal";
 
 /**
  * Header name to track developer portal type.
