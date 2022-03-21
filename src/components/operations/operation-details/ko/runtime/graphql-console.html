@@ -16,12 +16,12 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
                 <a href="#"
-                    data-bind="text: $component.api().displayName, attr: { href: $component.getApiReferenceUrl() }"></a>
+                    data-bind="text: api().displayName, attr: { href: getApiReferenceUrl() }"></a>
             </li>
 
-            <!-- ko if: $component.api().apiVersion -->
+            <!-- ko if: api().apiVersion -->
             <li class="breadcrumb-item">
-                <span data-bind="text: $component.api().apiVersion"></span>
+                <span data-bind="text: api().apiVersion"></span>
             </li>
             <!-- /ko -->
         </ol>
@@ -29,22 +29,22 @@
 
     <div class="mw-600">
         <authorization
-            params="{ api: $component.api, authorizationServer: $component.authorizationServer, headers: $component.headers}">
+            params="{ api: api, authorizationServer: authorizationServer, headers: headers}">
         </authorization>
 
         <h3 class="pt-0">Headers
-            <button class="no-border" data-bind="click: $component.collapse('collapsedHeaders')">
-                <!-- ko if: $component.collapsedHeaders -->
+            <button class="no-border" data-bind="click: collapse('collapsedHeaders')">
+                <!-- ko if: collapsedHeaders -->
                 <i class="icon-emb icon-emb-chevron-down"></i>
                 <!-- /ko -->
-                <!-- ko ifnot: $component.collapsedHeaders -->
+                <!-- ko ifnot: collapsedHeaders -->
                 <i class="icon-emb icon-emb-chevron-up"></i>
                 <!-- /ko -->
             </button>
         </h3>
-        <!-- ko ifnot: $component.collapsedHeaders -->
-        <!-- ko if: $component.headers().length > 0 -->
-        <div data-bind="foreach: { data: $component.headers, as: 'header' }">
+        <!-- ko ifnot: collapsedHeaders -->
+        <!-- ko if: headers().length > 0 -->
+        <div data-bind="foreach: { data: headers, as: 'header' }">
             <div class="row flex flex-row headers-gql pl-0">
                 <div class="col-4">
                     <div class="form-group">
@@ -79,7 +79,7 @@
         </div>
         <!-- /ko -->
 
-        <a href="#" role="button" data-bind="click: $component.addHeader">
+        <a href="#" role="button" data-bind="click: addHeader">
             <i class="icon-emb icon-emb-plus"></i> Add header
         </a>
         <!-- /ko -->
@@ -87,49 +87,31 @@
 </div>
 
 <div class="panel panel-dark animation-fade-in panel-highlight flex-item flex-grow menu menu-horizontal">
-    <div class="gql-tabs">
-        <!-- ko foreach: { data: graphDocService.availableTypes, as: 'type' } -->
-        <!-- ko ifnot: type == 'Subscription' -->
-        <button
-            data-bind="text: type, click: () => {$component.typeChange(type)}, css: {active: $component.queryType() == type}">
-        </button>
-        <!-- /ko -->
-        <!-- ko if: type == 'Subscription' -->
-        <button
-            data-bind="click: () => {$component.typeChange(type)}, css: {active: $component.queryType() == type}">
-            <!-- ko if: $component.wsConnected -->
-            <i class="icon-emb icon-emb-embrss ws-connected blink" title="Connected"></i>
-            <!-- /ko -->
-            Subscription
-            <!-- ko if: $component.notifications() > 0 && $component.wsConnected && !$component.isSubscription() -->
-            <span class="ws-notifications" data-bind="text: $component.notifications()"></span>
-            <!-- /ko -->
-        </button>
-        <!-- /ko -->
-        <!-- /ko -->
-    </div>
+
     <div class="gql-container">
-        <!-- <select class="form-control"
-                    data-bind="options: graphDocService.availableTypes, value: queryType"></select> -->
         <div class="gql-explorer-grid">
             <h4>Explorer
-                <button class="no-border visible-collapse" data-bind="click: $component.collapse('collapsedExplorer')">
-                    <!-- ko if: $component.collapsedExplorer -->
+                <button class="no-border visible-collapse" data-bind="click: collapse('collapsedExplorer')">
+                    <!-- ko if: collapsedExplorer -->
                     <i class="icon-emb icon-emb-chevron-down"></i>
                     <!-- /ko -->
-                    <!-- ko ifnot: $component.collapsedExplorer -->
+                    <!-- ko ifnot: collapsedExplorer -->
                     <i class="icon-emb icon-emb-chevron-up"></i>
                     <!-- /ko -->
                 </button>
             </h4>
 
-            <!-- ko ifnot: $component.collapsedExplorer -->
+            <!-- ko ifnot: collapsedExplorer -->
             <div class="menu menu-vertical d-block flex-item flex-grow animation-fade-in">
                 <input class="form-control search" type="search" aria-label="Search" placeholder="Search operations"
                     spellcheck="false" data-bind="textInput: filter" />
 
-                <div class="input-group explorer-operations scrollable">
-                    <!-- ko template: { name: 'graphqlExplorer', data: {operationNode: $component.node(), filter: filter()} } -->
+                <div class="explorer-operations scrollable">
+                    <!-- ko foreach: { data: graphDocService.availableTypes, as: 'type' } -->
+                    <span class="operationType-gql" data-bind="text: type"></span>
+                    <!-- ko template: { name: 'graphqlExplorer', data: {operationNode:  $component.getOperationNode(type), filter: $component.filter()} } -->
+                    <!-- /ko -->
+
                     <!-- /ko -->
                 </div>
             </div>
@@ -150,15 +132,15 @@
             <div class="query-variable" id="variablesEditor"></div>
             <div class="flex flex-column align-items-end">
                 <div class="btn-group margin-top-send" role="group">
-                    <!-- ko ifnot: isSubscription() -->
+                    <!-- ko ifnot: isSubscriptionOperation() -->
 
-                    <!-- ko ifnot: $component.sendingRequest()-->
+                    <!-- ko ifnot: sendingRequest()-->
                     <button type="button" class="button button-primary btn-sm"
                         data-bind="click: validateAndSendRequest">
                         Send
                     </button>
                     <!-- /ko -->
-                    <!-- ko if: $component.sendingRequest() -->
+                    <!-- ko if: sendingRequest() -->
                     <button type="button" class="button button-primary btn-sm" disabled>
                         Sending...
                     </button>
@@ -166,7 +148,7 @@
 
                     <!-- /ko -->
 
-                    <!-- ko if: isSubscription() -->
+                    <!-- ko if: isSubscriptionOperation() -->
 
                     <!-- ko ifnot: wsConnected -->
                     <!-- ko ifnot: wsProcessing -->

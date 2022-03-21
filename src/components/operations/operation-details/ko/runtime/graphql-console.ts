@@ -32,13 +32,15 @@ import * as _ from "lodash";
 })
 export class GraphqlConsole {
 
-    private queryNode: ko.Observable<GraphQLTreeNode>;
-    private mutationNode: ko.Observable<GraphQLTreeNode>;
-    private subscriptionNode: ko.Observable<GraphQLTreeNode>;
+    private operationNodes: {
+        query: ko.Observable<GraphQLTreeNode>,
+        mutation: ko.Observable<GraphQLTreeNode>,
+        subscription: ko.Observable<GraphQLTreeNode>
+    }
+
+    private globalNodes: ko.ObservableArray<GraphQLTreeNode>
 
     private schema: string;
-    public node: ko.Observable<GraphQLTreeNode>;
-    public queryType: ko.Observable<string>;
     public filter: ko.Observable<string>;
 
     private queryEditor: monaco.editor.IStandaloneCodeEditor;
@@ -61,12 +63,13 @@ export class GraphqlConsole {
     public readonly contentParseErrors: ko.Observable<string>;
     public backendUrl: string;
 
+    public readonly isSubscriptionOperation: ko.Observable<boolean>;
+
     public readonly wsConnected: ko.Observable<boolean>;
     public readonly wsProcessing: ko.Observable<boolean>;
     private ws: WebsocketClient;
     public readonly wsLogItems: ko.ObservableArray<object>;
     public readonly lastViewedNotifications: ko.Observable<number>;
-    public readonly fromTabChange: ko.Observable<boolean>;
     
 
     constructor(
@@ -84,7 +87,6 @@ export class GraphqlConsole {
         this.sendingRequest = ko.observable(false);
         this.authorizationServer = ko.observable();
         this.headers = ko.observableArray();
-        this.queryType = ko.observable(GraphqlTypes.query);
         this.document = ko.observable();
         this.operationUrl = ko.observable();
         this.variables = ko.observable();
@@ -94,13 +96,17 @@ export class GraphqlConsole {
         this.contentParseErrors = ko.observable(null);
         this.useCorsProxy = ko.observable(true);
 
-        this.queryNode = ko.observable();
-        this.mutationNode = ko.observable();
-        this.subscriptionNode = ko.observable();
-        this.node = ko.observable();
+        this.operationNodes = {
+            query: ko.observable(),
+            mutation: ko.observable(),
+            subscription: ko.observable()
+        }
+        this.globalNodes = ko.observableArray([]);
+
+        this.isSubscriptionOperation = ko.observable(false);
+
         this.wsConnected = ko.observable(false);
         this.wsProcessing = ko.observable(false);
-        this.fromTabChange = ko.observable(false);
         this.lastViewedNotifications = ko.observable();
         this.wsLogItems = ko.observableArray([]);
     }
@@ -121,7 +127,7 @@ export class GraphqlConsole {
     public async initialize(): Promise<void> {
         await this.resetConsole();
         await this.loadingMonaco();
-        this.queryType.subscribe(this.onQueryTypeChange);
+        //this.queryType.subscribe(this.onQueryTypeChange);
         this.document.subscribe(this.onDocumentChange);
         this.response.subscribe(this.onResponseChange);
         this.backendUrl = await this.settingsProvider.getSetting<string>("backendUrl");
@@ -145,8 +151,8 @@ export class GraphqlConsole {
         const graphQLSchemas = await this.apiService.getSchemas(this.api());
         this.schema = graphQLSchemas.value.find(s => s.graphQLSchema)?.graphQLSchema;
         await this.buildTree(this.schema);
+        this.availableOperations();
         this.selectByDefault();
-        this.generateDocument();
         this.working(false);
     }
 
@@ -156,45 +162,26 @@ export class GraphqlConsole {
 
     private selectByDefault(): void {
         const type = this.graphDocService.currentSelected()[GraphqlCustomFieldNames.type]();
-        this.onQueryTypeChange(GraphqlTypesForDocumentation[type]);
+        this.operationNodes[type]().toggle(true);
+
+        //this.onQueryTypeChange(GraphqlTypesForDocumentation[type]);
         const name = this.graphDocService.currentSelected()['name'];
 
-        for (let child of this.node().children()) {
+        for (let child of this.operationNodes[type]().children()) {
             if(child.label() === name) {
                 child.toggle();
                 break;
             }
         }
-    }
-
-    private async onQueryTypeChange(queryType: string): Promise<void> {
-        this.queryType(queryType);
-        const type = this.graphDocService.typeIndexer()[queryType];
-        switch (type) {
-            case "query":
-                this.node(this.queryNode());
-                break;
-            case "mutation":
-                this.node(this.mutationNode());
-                break;
-            case "subscription":
-                this.node(this.subscriptionNode());
-                break;
-            default:
-                break;
-        }
-        this.node().toggle(true);
+        this.generateDocument();
     }
 
     private onDocumentChange(document: string): void {
         if (this.editorUpdate) {
             this.queryEditor.setValue(document);
         }
-        if(this.isSubscription() && this.wsConnected() && !this.fromTabChange()) {
-            this.closeWsConnection(true);
-        }
         this.editorUpdate = true;
-        this.fromTabChange(false);
+        this.isSubscriptionOperation(document.trim().startsWith(GraphqlTypes.subscription));
     }
 
     private onResponseChange(response: string): void {
@@ -204,16 +191,21 @@ export class GraphqlConsole {
     documentToTree() {
         try {
             const ast = GraphQL.parse(this.document(), { noLocation: true });
-            for (let child of this.node().children()) {
-                child.clear();
+            for (let node of this.globalNodes()) {
+                node?.clear();
+                node?.toggle(true, false);
             }
-            let curNode = this.node();
+            let curNode: GraphQLTreeNode;
             let variables = [];
 
             // Go through every node in a new generated parsed graphQL, associate the node with the created tree from init and toggle checkmark.
             GraphQL.visit(ast, {
-                enter(node) {
-                    if (node.kind === GraphQL.Kind.FIELD || node.kind === GraphQL.Kind.ARGUMENT || node.kind === GraphQL.Kind.OBJECT_FIELD || node.kind === GraphQL.Kind.INLINE_FRAGMENT) {
+                enter: node => {
+                    if (node.kind === GraphQL.Kind.OPERATION_DEFINITION) {
+                        variables = [];
+                        curNode = this.globalNodes().find(mainNode => mainNode.label() == node.operation);
+                    } else if (node.kind === GraphQL.Kind.FIELD || node.kind === GraphQL.Kind.ARGUMENT 
+                        || node.kind === GraphQL.Kind.OBJECT_FIELD || node.kind === GraphQL.Kind.INLINE_FRAGMENT) {
                         let targetNode: GraphQLTreeNode;
                         if (node.kind === GraphQL.Kind.FIELD) {
                             targetNode = curNode.children().find(n => !n.isInputNode() && n.label() === node.name.value);
@@ -223,7 +215,8 @@ export class GraphqlConsole {
                             let inputNode = <GraphQLInputTreeNode>curNode.children().find(n => n.isInputNode() && n.label() === node.name.value);
                             if (node.value.kind === GraphQL.Kind.STRING) {
                                 inputNode.inputValue(`"${node.value.value}"`);
-                            } else if (node.value.kind === GraphQL.Kind.BOOLEAN || node.value.kind === GraphQL.Kind.INT || node.value.kind === GraphQL.Kind.FLOAT || node.value.kind === GraphQL.Kind.ENUM) {
+                            } else if (node.value.kind === GraphQL.Kind.BOOLEAN || node.value.kind === GraphQL.Kind.INT 
+                                || node.value.kind === GraphQL.Kind.FLOAT || node.value.kind === GraphQL.Kind.ENUM) {
                                 inputNode.inputValue(`${node.value.value}`);
                             } else if (node.value.kind === GraphQL.Kind.VARIABLE) {
                                 inputNode.inputValue(`$${node.value.name.value}`);
@@ -234,7 +227,8 @@ export class GraphqlConsole {
                             curNode = targetNode;
                             curNode.toggle(true, false);
                         }
-                    } else if (node.kind === GraphQL.Kind.VARIABLE_DEFINITION && (node.type.kind === GraphQL.Kind.NAMED_TYPE || node.type.kind === GraphQL.Kind.NON_NULL_TYPE)) {
+                    } else if (node.kind === GraphQL.Kind.VARIABLE_DEFINITION && 
+                        (node.type.kind === GraphQL.Kind.NAMED_TYPE || node.type.kind === GraphQL.Kind.NON_NULL_TYPE)) {
                         let typeString;
                         if (node.type.kind === GraphQL.Kind.NON_NULL_TYPE && node.type.type.kind === GraphQL.Kind.NAMED_TYPE) {
                             typeString = `${node.type.type.name.value}!`;
@@ -247,16 +241,21 @@ export class GraphqlConsole {
                         });
                     }
                 },
-                leave(node) {
-                    if (curNode && node.kind === GraphQL.Kind.FIELD || node.kind === GraphQL.Kind.ARGUMENT || node.kind === GraphQL.Kind.OBJECT_FIELD || node.kind === GraphQL.Kind.INLINE_FRAGMENT) {
-                        if(node.kind !== GraphQL.Kind.FIELD || node.name.value !== GraphqlMetaField.typename)
+                leave: node => {
+                    if (curNode && (node.kind === GraphQL.Kind.FIELD || node.kind === GraphQL.Kind.ARGUMENT 
+                        || node.kind === GraphQL.Kind.OBJECT_FIELD || node.kind === GraphQL.Kind.INLINE_FRAGMENT 
+                        || node.kind === GraphQL.Kind.OPERATION_DEFINITION)) {
+                        if (node.kind === GraphQL.Kind.OPERATION_DEFINITION) {
+                            (<GraphQLOutputTreeNode>curNode).variables = variables;
+                        }
+                        if(!(node.kind === GraphQL.Kind.FIELD && node.name.value === GraphqlMetaField.typename))
                             curNode = curNode.parent();
                     }
                 }
             });
-            (<GraphQLOutputTreeNode>this.node()).variables = variables;
         } catch (err) {
             // Do nothing here as the doc is invalidated
+            return;
         }
     }
 
@@ -329,14 +328,14 @@ export class GraphqlConsole {
             this.response(responseStr);
 
             //Remove this example
-            if(this.wsConnected() && this.queryType() == GraphqlTypesForDocumentation.mutation) {
-                let datetime = new Date()
-                this.wsLogItems.push({
-                    "logData": this.response(),
-                    "logTime": datetime.toLocaleTimeString(),
-                    "logType": "GetData"
-                })
-            }
+            // if(this.wsConnected() && this.queryType() == GraphqlTypesForDocumentation.mutation) {
+            //     let datetime = new Date()
+            //     this.wsLogItems.push({
+            //         "logData": this.response(),
+            //         "logTime": datetime.toLocaleTimeString(),
+            //         "logType": "GetData"
+            //     })
+            // }
         }
         catch (error) {
             if (error.code && error.code === "RequestError") {
@@ -398,9 +397,7 @@ export class GraphqlConsole {
         loader.config({ paths: { vs: "/assets/monaco-editor/vs" } });
         loader.init().then(monaco => {
             this.initEditor(VariablesEditorSettings, this.variables);
-            if(!this.isSubscription()) {
-                this.initEditor(ResponseSettings, this.response);
-            }
+            this.initEditor(ResponseSettings, this.response);
             this.initEditor(QueryEditorSettings, this.document);
         });
     }
@@ -439,9 +436,9 @@ export class GraphqlConsole {
                     this.contentParseErrors(null);
                     clearTimeout(this.onContentChangeTimoutId);
                     this.onContentChangeTimoutId = window.setTimeout(async () => {
-                        if(this.isSubscription() && this.wsConnected()) {
-                            await this.closeWsConnection(true);
-                        }
+                        // if(this.isSubscription() && this.wsConnected()) {
+                        //     await this.closeWsConnection(true);
+                        // }
                         this.tryParseGraphQLSchema(value);
                         if (this.isContentValid()) {
                             this.editorUpdate = false;
@@ -460,24 +457,24 @@ export class GraphqlConsole {
     private buildTree(content: string): void {
         const schema = GraphQL.buildSchema(content);
 
-        this.queryNode(new GraphQLOutputTreeNode(GraphqlTypes.query, <GraphQL.GraphQLField<any, any>>{
+        this.operationNodes.query(new GraphQLOutputTreeNode(GraphqlTypes.query, <GraphQL.GraphQLField<any, any>>{
             type: schema.getQueryType(),
             args: []
         }, () => this.generateDocument(), null));
 
-        this.mutationNode(new GraphQLOutputTreeNode(GraphqlTypes.mutation, <GraphQL.GraphQLField<any, any>>{
+        this.operationNodes.mutation(new GraphQLOutputTreeNode(GraphqlTypes.mutation, <GraphQL.GraphQLField<any, any>>{
             type: schema.getMutationType(),
             args: []
         }, () => this.generateDocument(), null));
 
-        this.subscriptionNode(new GraphQLOutputTreeNode(GraphqlTypes.subscription, <GraphQL.GraphQLField<any, any>>{
+        this.operationNodes.subscription(new GraphQLOutputTreeNode(GraphqlTypes.subscription, <GraphQL.GraphQLField<any, any>>{
             type: schema.getSubscriptionType(),
             args: []
         }, () => this.generateDocument(), null));
     }
 
     public generateDocument() {
-        const document = `${this.createFieldStringFromNodes([this.node()], 0)}`;
+        const document = `${this.createFieldStringFromNodes(this.globalNodes(), 0)}`;
         this.document(document);
     }
 
@@ -502,7 +499,7 @@ export class GraphqlConsole {
                     outputNodes.push(child);
                 }
             }
-            if (node.selected()) {
+            if (this.checkingGeneration(node)) {
                 const parentType = getType(node.parent()?.data?.type);
                 const nodeName = (parentType instanceof GraphQL.GraphQLUnionType) ? `... on ${node.label()}` : node.label();
                 if (level === 0) {
@@ -518,13 +515,34 @@ export class GraphqlConsole {
             result = "";
         } else {
             if (level === 0) {
-                result = selectedNodes[0];
+                result = selectedNodes.join("\n\n");
             } else {
                 result = ` {\n${selectedNodes.join("\n")}\n${"\t".repeat(level - 1)}}`
             }
         }
         return result;
     }
+
+    
+
+    private checkingGeneration(node: GraphQLTreeNode): boolean {
+        const isOperation = _.includes([GraphqlTypes.query, GraphqlTypes.mutation, GraphqlTypes.subscription], node.label());
+        if((node.selected() && !isOperation) || (node.selected() && isOperation && node.hasActiveChild())) {
+            return true;
+        }
+        return false;
+    }
+
+    // private thereIsSelectedChild(children: GraphQLTreeNode[]): boolean {
+    //     if(children.length > 0) {
+    //         for (const child of children) {
+    //             if(child.selected()) {
+    //                 return true;
+    //             }
+    //         }
+    //     }
+    //     return false;
+    // }
 
     /**
     * 
@@ -569,23 +587,36 @@ export class GraphqlConsole {
         this[collapsible](!this[collapsible]());
     }
 
-    public typeChange(type: string): void {
-        this.fromTabChange(true);
-        if(this.isSubscription() && type != GraphqlTypesForDocumentation.subscription) {
-            this.lastViewedNotifications(this.wsLogItems().length);
-            this.queryType(type);
-            this.initEditor(ResponseSettings, this.response);
-        }
-        else 
-            this.queryType(type);
+    private availableOperations(): void {
+        _.forEach(this.graphDocService.availableTypes(), (type) => {
+            const node = this.operationNodes[this.graphDocService.typeIndexer()[type]]();
+            node.toggle(true);
+            this.globalNodes.push(node);
+        })
     }
+
+    public getOperationNode(type : string) {
+        return this.operationNodes[this.graphDocService.typeIndexer()[type]]();
+    }
+
+    // public typeChange(type: string): void {
+    //     this.fromTabChange(true);
+    //     if(this.isSubscription() && type != GraphqlTypesForDocumentation.subscription) {
+    //         this.lastViewedNotifications(this.wsLogItems().length);
+    //         this.queryType(type);
+    //         this.initEditor(ResponseSettings, this.response);
+    //     }
+    //     else 
+    //         this.queryType(type);
+    // }
 
     public notifications(): number {
         return (this.lastViewedNotifications()) ? this.wsLogItems().length - this.lastViewedNotifications(): 0;
     }
 
     public isSubscription(): boolean {
-        return this.queryType() == GraphqlTypesForDocumentation.subscription;
+        return false;
+        //return this.queryType() == GraphqlTypesForDocumentation.subscription;
     }
 
     public closeConnections(): void {
