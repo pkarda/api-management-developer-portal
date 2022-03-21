@@ -88,7 +88,7 @@
 
 <div class="panel panel-dark animation-fade-in panel-highlight flex-item flex-grow menu menu-horizontal">
 
-    <div class="gql-container">
+    <div class="gql-container" data-bind="css: { 'ws-responses': displayWsConsole() }">
         <div class="gql-explorer-grid">
             <h4>Explorer
                 <button class="no-border visible-collapse" data-bind="click: collapse('collapsedExplorer')">
@@ -183,12 +183,16 @@
         </div>
         <div class="gql-response-grid">
             <h4>Response</h4>
-            <!-- ko ifnot: isSubscription() -->
-            <div class="response-editor" id="responseEditor"></div>
-            <!-- /ko -->
+            <div data-bind="class: displayWsConsole() ? 'response-editor-with-ws' : 'response-editor'" id="responseEditor"></div>
 
-            <!-- ko if: isSubscription() -->
-            <div class="response-editor table-ws-gql logs">
+            <!-- ko if: displayWsConsole() -->
+            <h4 class="margin-top-variables">
+                Subscription
+                <!-- ko if: wsConnected -->
+                <i class="icon-emb icon-emb-embrss ws-connected blink" title="Connected"></i>
+                <!-- /ko -->
+            </h4>
+            <div class="response-ws table-ws-gql logs">
                 <div class="d-contents" role="rowgroup">
                     <div class="d-contents" role="row">
                         <div role="columnheader" class="table-preset-head">Time</div>
