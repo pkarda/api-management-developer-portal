@@ -2,7 +2,7 @@
     display: grid;
     max-width: 100%;
     overflow-x: auto;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 
     &.logs {
         grid-template-columns: auto auto 1fr;
@@ -16,34 +16,10 @@
     }
 }
 
-.gql-tabs {
-    overflow: hidden;
-    background-color: #f2f2f2;
-    padding-top: 10px;
-}
-
-.gql-tabs button {
-    background-color: inherit;
-    float: left;
-    border: none;
-    outline: none;
-    padding: 14px 16px;
-    transition: 0.3s;
-    font-size: 15px;
-    font-weight: bold;
-  }
-
-.gql-tabs button:hover {
-    background-color: #ddd;
-}
-
-.gql-tabs button.active {
-    background-color: #ccc;
-}
-
 .ws-connected {
     margin-right: 8px;
     color: #128930;
+    font-size: 17px;
 }
 
 .blink {
@@ -53,17 +29,6 @@
 @keyframes blinker {  
   from { opacity: 1; }
   to { opacity: 0; }
-}
-
-.ws-notifications {
-    position: absolute;
-    top: -7px;
-    right: -7px;
-    padding: 5px 10px;
-    border-radius: 50%;
-    background: #ff5c5c;
-    color: white;
-    font-size: 12px;
 }
 
 .gql-container {
@@ -81,9 +46,15 @@
     @media (max-width: 1200px) and (min-width: 769px) {
          @media (max-height: 1200px){
             grid-template-rows: 452px 248px;
+            &.ws-responses {
+                height: 1020px;
+            }
         }
         @media (min-height: 1201px) {
             grid-template-rows: 607px 333px;
+            &.ws-responses {
+                height: 1250px;
+            }
         }
         grid-template-columns: 30% 70%;
         grid-template-areas: "explorer query" ". response";
@@ -136,13 +107,8 @@
         margin-top: 0;
     }
     @media (max-width: 768px) {
-        margin-top: 20px;
+        margin-top: 60px;
     }
-}
-
-.description-text {
-    font-style: italic;
-    margin-bottom: 10px;
 }
 
 .operation-pointer {
@@ -163,13 +129,13 @@
 
 .query-editor {
     @media (max-height: 1200px) {
-        height: 390px;
+        height: 440px;
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 150px;
         }
     }
     @media (min-height: 1201px) {
-        height: 518px;
+        height: 533px;
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 303px;
         }
@@ -184,7 +150,7 @@
         }
     }
     @media (min-height: 1201px) {
-        height: 228px;
+        height: 263px;
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 103px;
         }
@@ -193,13 +159,49 @@
 
 .response-editor {
     @media (max-height: 1200px) {
-        height: 620px;
+        height: 670px;
         @media (max-width: 1200px) and (min-width: 769px) {
-            height: 168px;
+            height: 218px;
+        }
+        @media (max-width: 768px) {
+            height: 600px;
         }
     }
     @media (min-height: 1201px) {
-        height: 810px;
+        height: 860px;
+        @media (max-width: 1200px) and (min-width: 769px) {
+            height: 254px;
+        }
+    }
+}
+
+.response-editor-with-ws {
+    @media (max-height: 1200px) {
+        height: 200px;
+        @media (max-width: 1200px) and (min-width: 769px) {
+            height: 218px;
+        }
+    }
+    @media (min-height: 1201px) {
+        height: 250px;
+        @media (max-width: 1200px) and (min-width: 769px) {
+            height: 254px;
+        }
+    }
+}
+
+.response-ws {
+    @media (max-height: 1200px) {
+        height: 406px;
+        @media (max-width: 1200px) and (min-width: 769px) {
+            height: 218px;
+        }
+        @media (max-width: 768px) {
+            height: 330px;
+        }
+    }
+    @media (min-height: 1201px) {
+        height: 546px;
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 254px;
         }
@@ -208,10 +210,10 @@
 
 .explorer-operations {
     @media (max-height: 1200px) {
-        height: 560px;
+        height: 614px;
     }
     @media (min-height: 1201px) {
-        height: 750px;
+        height: 804px;
     }
 }
 

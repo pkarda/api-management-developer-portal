@@ -614,9 +614,8 @@ export class GraphqlConsole {
         return (this.lastViewedNotifications()) ? this.wsLogItems().length - this.lastViewedNotifications(): 0;
     }
 
-    public isSubscription(): boolean {
-        return false;
-        //return this.queryType() == GraphqlTypesForDocumentation.subscription;
+    public displayWsConsole(): boolean {
+        return this.wsProcessing() || this.wsConnected();
     }
 
     public closeConnections(): void {
