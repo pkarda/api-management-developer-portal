@@ -212,6 +212,8 @@ export enum GraphqlMetaField {
     typename = "__typename"
 }
 
+export const graphqlSubProtocol = "graphql-transport-ws";
+
 /**
  * Known setting names.
  */

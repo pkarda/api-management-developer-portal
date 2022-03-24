@@ -9,7 +9,7 @@ import template from "./graphql-console.html";
 import graphqlExplorer from "./graphql-explorer.html";
 import { Api } from "../../../../../models/api";
 import { RouteHelper } from "../../../../../routing/routeHelper";
-import { QueryEditorSettings, VariablesEditorSettings, ResponseSettings, GraphqlTypes, GraphqlCustomFieldNames, GraphqlTypesForDocumentation, GraphqlMetaField } from "./../../../../../constants";
+import { QueryEditorSettings, VariablesEditorSettings, ResponseSettings, GraphqlTypes, GraphqlCustomFieldNames, GraphqlMetaField, graphqlSubProtocol } from "./../../../../../constants";
 import { AuthorizationServer } from "../../../../../models/authorizationServer";
 import { ConsoleHeader } from "../../../../../models/console/consoleHeader";
 import { ApiService } from "../../../../../services/apiService";
@@ -20,7 +20,7 @@ import { ISettingsProvider } from "@paperbits/common/configuration";
 import { ResponsePackage } from "./responsePackage";
 import { Utils } from "../../../../../utils";
 import { GraphDocService } from "./graphql-documentation/graphql-doc-service";
-import { LogItem, WebsocketClient } from "./websocketClient";
+import { LogItem, LogItemType, WebsocketClient } from "./websocketClient";
 import * as _ from "lodash";
 
 @Component({
@@ -55,12 +55,14 @@ export class GraphqlConsole {
     public readonly working: ko.Observable<boolean>;
     public readonly collapsedExplorer: ko.Observable<boolean>;
     public readonly collapsedHeaders: ko.Observable<boolean>;
+    public readonly collapsedQuery: ko.Observable<boolean>;
+    public readonly collapsedMutation: ko.Observable<boolean>;
+    public readonly collapsedSubscription: ko.Observable<boolean>;
     public readonly headers: ko.ObservableArray<ConsoleHeader>;
-    public readonly requestError: ko.Observable<string>;
+    public readonly editorErrors: ko.ObservableArray<string>;
     public readonly variables: ko.Observable<string>;
     public readonly response: ko.Observable<string>;
     public readonly isContentValid: ko.Observable<boolean>;
-    public readonly contentParseErrors: ko.Observable<string>;
     public backendUrl: string;
 
     public readonly isSubscriptionOperation: ko.Observable<boolean>;
@@ -69,7 +71,6 @@ export class GraphqlConsole {
     public readonly wsProcessing: ko.Observable<boolean>;
     private ws: WebsocketClient;
     public readonly wsLogItems: ko.ObservableArray<object>;
-    public readonly lastViewedNotifications: ko.Observable<number>;
     
 
     constructor(
@@ -82,7 +83,10 @@ export class GraphqlConsole {
         this.working = ko.observable(true);
         this.collapsedExplorer = ko.observable(true);
         this.collapsedHeaders = ko.observable(true);
-        this.requestError = ko.observable();
+        this.collapsedQuery = ko.observable(true);
+        this.collapsedMutation = ko.observable(true);
+        this.collapsedSubscription = ko.observable(true);
+        this.editorErrors = ko.observableArray([]);
         this.api = ko.observable<Api>();
         this.sendingRequest = ko.observable(false);
         this.authorizationServer = ko.observable();
@@ -93,7 +97,6 @@ export class GraphqlConsole {
         this.response = ko.observable();
         this.filter = ko.observable("");
         this.isContentValid = ko.observable(true);
-        this.contentParseErrors = ko.observable(null);
         this.useCorsProxy = ko.observable(true);
 
         this.operationNodes = {
@@ -107,7 +110,6 @@ export class GraphqlConsole {
 
         this.wsConnected = ko.observable(false);
         this.wsProcessing = ko.observable(false);
-        this.lastViewedNotifications = ko.observable();
         this.wsLogItems = ko.observableArray([]);
     }
 
@@ -127,7 +129,6 @@ export class GraphqlConsole {
     public async initialize(): Promise<void> {
         await this.resetConsole();
         await this.loadingMonaco();
-        //this.queryType.subscribe(this.onQueryTypeChange);
         this.document.subscribe(this.onDocumentChange);
         this.response.subscribe(this.onResponseChange);
         this.backendUrl = await this.settingsProvider.getSetting<string>("backendUrl");
@@ -153,6 +154,7 @@ export class GraphqlConsole {
         await this.buildTree(this.schema);
         this.availableOperations();
         this.selectByDefault();
+        this.isSubscriptionOperation(this.document().trim().startsWith(GraphqlTypes.subscription));
         this.working(false);
     }
 
@@ -163,8 +165,6 @@ export class GraphqlConsole {
     private selectByDefault(): void {
         const type = this.graphDocService.currentSelected()[GraphqlCustomFieldNames.type]();
         this.operationNodes[type]().toggle(true);
-
-        //this.onQueryTypeChange(GraphqlTypesForDocumentation[type]);
         const name = this.graphDocService.currentSelected()['name'];
 
         for (let child of this.operationNodes[type]().children()) {
@@ -265,15 +265,6 @@ export class GraphqlConsole {
         }
         catch (error) {
             this.isContentValid(false);
-
-            const message = error.message;
-            const location = error.locations.shift();
-
-            const position = !!location
-                ? ` Line: ${location.line}. Column: ${location.column}.`
-                : "";
-
-            this.contentParseErrors(`${message}${position}`);
         }
     }
 
@@ -300,7 +291,10 @@ export class GraphqlConsole {
     }
 
     private async sendRequest(): Promise<void> {
-        this.requestError(null);
+        this.editorValidations();
+        if(this.editorErrors().length > 0) {
+            return;
+        }
         this.sendingRequest(true);
 
         let payload: string;
@@ -326,21 +320,9 @@ export class GraphqlConsole {
             }
             const responseStr = Buffer.from(response.body.buffer).toString();
             this.response(responseStr);
-
-            //Remove this example
-            // if(this.wsConnected() && this.queryType() == GraphqlTypesForDocumentation.mutation) {
-            //     let datetime = new Date()
-            //     this.wsLogItems.push({
-            //         "logData": this.response(),
-            //         "logTime": datetime.toLocaleTimeString(),
-            //         "logType": "GetData"
-            //     })
-            // }
         }
         catch (error) {
-            if (error.code && error.code === "RequestError") {
-                this.requestError(`Since the browser initiates the request, it requires Cross-Origin Resource Sharing (CORS) enabled on the server. <a href="https://aka.ms/AA4e482" target="_blank">Learn more</a>`);
-            }
+            return;
         }
         finally {
             this.sendingRequest(false);
@@ -433,12 +415,8 @@ export class GraphqlConsole {
                 const value = this[editorSettings.id].getValue();
                 if (editorSettings.id === QueryEditorSettings.id) {
                     this.isContentValid(true);
-                    this.contentParseErrors(null);
                     clearTimeout(this.onContentChangeTimoutId);
                     this.onContentChangeTimoutId = window.setTimeout(async () => {
-                        // if(this.isSubscription() && this.wsConnected()) {
-                        //     await this.closeWsConnection(true);
-                        // }
                         this.tryParseGraphQLSchema(value);
                         if (this.isContentValid()) {
                             this.editorUpdate = false;
@@ -533,17 +511,6 @@ export class GraphqlConsole {
         return false;
     }
 
-    // private thereIsSelectedChild(children: GraphQLTreeNode[]): boolean {
-    //     if(children.length > 0) {
-    //         for (const child of children) {
-    //             if(child.selected()) {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-    //     return false;
-    // }
-
     /**
     * 
     * @param node root node, either query, mutation, or subscription
@@ -587,6 +554,11 @@ export class GraphqlConsole {
         this[collapsible](!this[collapsible]());
     }
 
+    public collapsedType(type: string): boolean {
+        const varName = 'collapsed' + type;
+        return this[varName]();
+    }
+
     private availableOperations(): void {
         _.forEach(this.graphDocService.availableTypes(), (type) => {
             const node = this.operationNodes[this.graphDocService.typeIndexer()[type]]();
@@ -599,86 +571,126 @@ export class GraphqlConsole {
         return this.operationNodes[this.graphDocService.typeIndexer()[type]]();
     }
 
-    // public typeChange(type: string): void {
-    //     this.fromTabChange(true);
-    //     if(this.isSubscription() && type != GraphqlTypesForDocumentation.subscription) {
-    //         this.lastViewedNotifications(this.wsLogItems().length);
-    //         this.queryType(type);
-    //         this.initEditor(ResponseSettings, this.response);
-    //     }
-    //     else 
-    //         this.queryType(type);
-    // }
-
-    public notifications(): number {
-        return (this.lastViewedNotifications()) ? this.wsLogItems().length - this.lastViewedNotifications(): 0;
-    }
-
     public displayWsConsole(): boolean {
         return this.wsProcessing() || this.wsConnected();
     }
 
-    public closeConnections(): void {
-        if(this.wsConnected()) {
-            this.closeWsConnection();
-        }
-    }
-
-    public async closeWsConnection(queryChanged = false): Promise<void> {
-        this.wsProcessing(true);
-
-        //TODO close the websocket connection
-        let datetime = new Date();
-        if(queryChanged) {
-            this.wsLogItems.push({
-                "logTime": datetime.toLocaleTimeString(),
-                "logData": "Disconnecting: Subscription Query has been updated",
-                "logType": "Connection"
-            })
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        datetime = new Date();
-        this.wsLogItems.push({
-            "logTime": datetime.toLocaleTimeString(),
-            "logData": "Disconnected",
-            "logType": "Connection"
-        })
-        
-        this.wsProcessing(false);
-        this.wsConnected(false);
+    public async closeWsConnection(): Promise<void> {
+            if(this.wsConnected()) {
+                this.wsConnected(false);
+                this.ws?.disconnect();
+            }
     }
 
     public async wsConnect(): Promise<void> {
+        this.editorValidations();
+        if (this.wsConnected() || this.editorErrors().length > 0) {
+            return;
+        }
+        
         this.wsProcessing(true);
 
-        //TODO Implement ws connection
-        let datetime = new Date();
-        this.wsLogItems.push({
-            "logTime": datetime.toLocaleTimeString(),
-            "logData": "Connecting to wss://jbtests-apimanagement.azure-api.net/",
-            "logType": "Connection"
-        });
-        this.wsLogItems.push({
-            "logTime": datetime.toLocaleTimeString(),
-            "logData": this.document(),
-            "logType": "SendData"
-        });
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        datetime = new Date();
-        this.wsLogItems.push({
-            "logTime": datetime.toLocaleTimeString(),
-            "logData": "Connected",
-            "logType": "Connection"
-        });
+        let url = this.operationUrl();
 
-        this.wsProcessing(false);
-        this.wsConnected(true);
+        url = "https://wpooleygqlnotification.azurewebsites.net/graphql"
+
+        if (url.startsWith("https://")) {
+            url = "wss://" + url.substring(8);
+        } else if (url.startsWith("http://")) {
+            url = "ws://" + url.substring(7)
+        }
+
+        this.initWebSocket();
+        this.ws.connect(url, graphqlSubProtocol);
     }
 
-    public clearLogs(): void {
+    public clearWsLogs(): void {
         this.wsLogItems([]);
-        //this.ws?.clearLogs();
     }
 
+    private initWebSocket(): void {
+        this.ws = new WebsocketClient();
+        this.ws.onOpen = () => {
+            this.wsProcessing(false);
+            this.wsConnected(true);
+            this.ws.send(JSON.stringify({
+                type: "connection_init",
+                payload: {}
+            }));
+            this.ws.send(JSON.stringify({
+                type: "subscribe",
+                id: "1",
+                payload: {
+                    query: this.document(),
+                    variables: this.variables() && this.variables().length > 0 ? JSON.parse(this.variables()) : null
+                }
+            }, null, 2));
+        };
+        this.ws.onLogItem = (data: LogItem) => {
+            if (!data) {
+                return;
+            }
+            if (data.logType === LogItemType.GetData) {
+                try {
+                    let json = JSON.parse(data.logData);
+                    if (json["type"] == "next" && "payload" in json) {
+                        data.logData = JSON.stringify(json["payload"], null, 2);
+                        this.wsLogItems.unshift(data);
+                    }
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            else if (data.logType === LogItemType.SendData) {
+                try {
+                    let json = JSON.parse(data.logData);
+                    if (json["type"] == "subscribe" && "payload" in json) {
+                        data.logData = JSON.stringify(json["payload"], null, 2);
+                        this.wsLogItems.unshift(data);
+                    }
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            else if (data.logType === LogItemType.Connection) {
+                if(_.includes(data.logData, 'Disconnected')) {
+                    return;
+                }
+                if(_.includes(data.logData, 'Disconnecting from')) {
+                    data.logData = _.replace(data.logData, 'Disconnecting', 'Disconnected');
+                }
+                this.wsLogItems.unshift(data);
+            }
+            else {
+                this.wsLogItems.unshift(data);
+            }
+        };
+    }
+
+    private editorValidations(): void {
+        this.editorErrors([]);
+        const markers = (<any>window).monaco.editor.getModelMarkers({});
+        if(!!markers.find(m => m.severity >= 5 && m.owner == "graphqlQuery")) {
+            this.editorErrors.push("Syntax error in 'Query editor'"); 
+        }
+        try {
+            JSON.parse(this.variables() || "{}");
+        } catch {
+            this.editorErrors.push("Cannot parse JSON in 'Query variables'");
+        }
+    }
+
+    public hasErrorEditors(): boolean {
+        return this.editorErrors().length > 0;
+    }
+
+    public canRestartSubscription(): boolean {
+        return this.wsConnected() && this.isSubscriptionOperation();
+    }
+
+    public restartSubscription(): void {
+        this.closeWsConnection();
+        this.wsConnect();
+    }
     
 }
