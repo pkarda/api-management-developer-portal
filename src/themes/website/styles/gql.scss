@@ -16,19 +16,9 @@
     }
 }
 
-.ws-connected {
-    margin-right: 8px;
-    color: #128930;
-    font-size: 17px;
-}
-
-.blink {
-    animation: blinker 1.5s cubic-bezier(.5, 0, 1, 1) infinite alternate;  
-}
-
-@keyframes blinker {  
-  from { opacity: 1; }
-  to { opacity: 0; }
+.gql-ws-spinner {
+    margin: 0px;
+    background: white;
 }
 
 .gql-container {
@@ -130,14 +120,26 @@
 .query-editor {
     @media (max-height: 1200px) {
         height: 440px;
+        &.with-errors {
+            height: 340px;
+        }
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 150px;
+            &.with-errors {
+                height: 90px;
+            }
         }
     }
     @media (min-height: 1201px) {
         height: 533px;
+        &.with-errors {
+            height: 450px;
+        }
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 303px;
+            &.with-errors {
+                height: 203px;
+            }
         }
     }
 }
@@ -145,14 +147,26 @@
 .query-variable {
     @media (max-height: 1200px) {
         height: 166px;
+        &.with-errors {
+            height: 153px;
+        }
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 100px;
+            &.with-errors {
+                height: 60px;
+            }
         }
     }
     @media (min-height: 1201px) {
         height: 263px;
+        &.with-errors {
+            height: 233px;
+        }
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 103px;
+            &.with-errors {
+                height: 103px;
+            }
         }
     }
 }
@@ -160,48 +174,48 @@
 .response-editor {
     @media (max-height: 1200px) {
         height: 670px;
+        &.with-ws {
+            height: 295px;
+        }
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 218px;
+            &.with-ws {
+                height: 218px;
+            }
         }
         @media (max-width: 768px) {
             height: 600px;
+            &.with-ws {
+                height: 280px;
+            }
         }
     }
     @media (min-height: 1201px) {
         height: 860px;
+        &.with-ws {
+            height: 392px;
+        }
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 254px;
-        }
-    }
-}
-
-.response-editor-with-ws {
-    @media (max-height: 1200px) {
-        height: 200px;
-        @media (max-width: 1200px) and (min-width: 769px) {
-            height: 218px;
-        }
-    }
-    @media (min-height: 1201px) {
-        height: 250px;
-        @media (max-width: 1200px) and (min-width: 769px) {
-            height: 254px;
+            &.with-ws {
+                height: 254px;
+            }
         }
     }
 }
 
 .response-ws {
     @media (max-height: 1200px) {
-        height: 406px;
+        height: 287px;
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 218px;
         }
         @media (max-width: 768px) {
-            height: 330px;
+            height: 280px;
         }
     }
     @media (min-height: 1201px) {
-        height: 546px;
+        height:  380px;
         @media (max-width: 1200px) and (min-width: 769px) {
             height: 254px;
         }
@@ -244,7 +258,7 @@
 }
 
 .margin-top-send {
-    margin-top: 25px;
+    margin-top: 15px;
 }
 
 .breadcrumb-gql {
@@ -287,4 +301,9 @@
     width: 100%;
     color: rgb(177, 26, 4);
     font-weight: bold;
+}
+
+.gql-editor-errors {
+    padding: 20px !important;
+    margin-top: 15px;
 }
