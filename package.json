@@ -104,7 +104,7 @@
     "remark-parse": "^10.0.1",
     "remark-rehype": "^10.1.0",
     "saxen": "^8.1.2",
-    "scaffold": "scaffold-0.0.3.tgz",
+    "scaffold": "scaffold-0.0.4.tgz",
     "topojson-client": "^3.1.0",
     "truncate-html": "^1.0.4"
   }
