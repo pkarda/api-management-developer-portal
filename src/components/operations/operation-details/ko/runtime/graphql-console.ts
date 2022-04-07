@@ -53,7 +53,6 @@ export class GraphqlConsole {
     public readonly document: ko.Observable<string>;
     public readonly sendingRequest: ko.Observable<boolean>;
     public readonly working: ko.Observable<boolean>;
-    public readonly collapsedExplorer: ko.Observable<boolean>;
     public readonly collapsedHeaders: ko.Observable<boolean>;
     public readonly collapsedQuery: ko.Observable<boolean>;
     public readonly collapsedMutation: ko.Observable<boolean>;
@@ -69,6 +68,7 @@ export class GraphqlConsole {
 
     public readonly wsConnected: ko.Observable<boolean>;
     public readonly wsProcessing: ko.Observable<boolean>;
+    public readonly displayWsConsole: ko.Observable<boolean>;
     private ws: WebsocketClient;
     public readonly wsLogItems: ko.ObservableArray<object>;
     
@@ -81,7 +81,6 @@ export class GraphqlConsole {
         private readonly graphDocService: GraphDocService
     ) {
         this.working = ko.observable(true);
-        this.collapsedExplorer = ko.observable(true);
         this.collapsedHeaders = ko.observable(true);
         this.collapsedQuery = ko.observable(true);
         this.collapsedMutation = ko.observable(true);
@@ -110,6 +109,7 @@ export class GraphqlConsole {
 
         this.wsConnected = ko.observable(false);
         this.wsProcessing = ko.observable(false);
+        this.displayWsConsole = ko.observable(false);
         this.wsLogItems = ko.observableArray([]);
     }
 
@@ -571,8 +571,9 @@ export class GraphqlConsole {
         return this.operationNodes[this.graphDocService.typeIndexer()[type]]();
     }
 
-    public displayWsConsole(): boolean {
-        return this.wsProcessing() || this.wsConnected();
+    public closeGraphqlConsole(): void {
+        this.closeWsConnection();
+        (<any>window).monaco.editor.getModels().forEach(model => model.dispose());
     }
 
     public async closeWsConnection(): Promise<void> {
@@ -582,6 +583,11 @@ export class GraphqlConsole {
             }
     }
 
+    public async closeWs(): Promise<void> {
+        this.closeWsConnection();
+        this.displayWsConsole(false);
+    }
+
     public async wsConnect(): Promise<void> {
         this.editorValidations();
         if (this.wsConnected() || this.editorErrors().length > 0) {
@@ -589,10 +595,9 @@ export class GraphqlConsole {
         }
         
         this.wsProcessing(true);
+        this.displayWsConsole(true);
 
         let url = this.operationUrl();
-
-        url = "https://wpooleygqlnotification.azurewebsites.net/graphql"
 
         if (url.startsWith("https://")) {
             url = "wss://" + url.substring(8);

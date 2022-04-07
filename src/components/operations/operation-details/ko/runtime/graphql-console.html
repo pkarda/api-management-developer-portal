@@ -8,7 +8,7 @@
 
 <div class="panel panel-dark animation-fade-in">
     <button type="button" class="no-border pull-right" data-dismiss="modal" aria-label="Close console"
-        data-bind="click: () => { closeWsConnection(); $parent.closeConsole();}">
+        data-bind="click: () => { closeGraphqlConsole(); $parent.closeConsole();}">
         <i class="icon-emb icon-emb-simple-remove"></i>
     </button>
 
@@ -88,20 +88,9 @@
 
 <div class="panel panel-dark animation-fade-in panel-highlight flex-item flex-grow menu menu-horizontal">
 
-    <div class="gql-container" data-bind="css: { 'ws-responses': displayWsConsole() }">
+    <div class="gql-container" data-bind="css: { 'ws-responses': displayWsConsole }">
         <div class="gql-explorer-grid">
-            <h4>Explorer
-                <button class="no-border visible-collapse" data-bind="click: collapse('collapsedExplorer')">
-                    <!-- ko if: collapsedExplorer -->
-                    <i class="icon-emb icon-emb-chevron-down"></i>
-                    <!-- /ko -->
-                    <!-- ko ifnot: collapsedExplorer -->
-                    <i class="icon-emb icon-emb-chevron-up"></i>
-                    <!-- /ko -->
-                </button>
-            </h4>
-
-            <!-- ko ifnot: collapsedExplorer -->
+            <h4>Explorer</h4>
             <div class="menu menu-vertical d-block flex-item flex-grow animation-fade-in">
                 <input class="form-control search" type="search" aria-label="Search" placeholder="Search operations"
                     spellcheck="false" data-bind="textInput: filter" />
@@ -127,7 +116,6 @@
                     <!-- /ko -->
                 </div>
             </div>
-            <!-- /ko -->
         </div>
         <div class="gql-query-grid">
             <h4>
@@ -191,9 +179,9 @@
         </div>
         <div class="gql-response-grid">
             <h4>Response</h4>
-            <div class="response-editor" data-bind="css: {'with-ws': displayWsConsole()}" id="responseEditor"></div>
+            <div class="response-editor" data-bind="css: {'with-ws': displayWsConsole}" id="responseEditor"></div>
 
-            <!-- ko if: displayWsConsole() -->
+            <!-- ko if: displayWsConsole -->
 
             <div class="margin-top-variables flex">
                 <h4>
@@ -202,19 +190,25 @@
                 <div class="code-snippet ml-auto">
                     <div class="code-snippet-heading">
                         <button class="code-snippet-command" data-bind="click: closeWsConnection"
-                            aria-label="Clear logs">
+                            aria-label="Disconnect">
                             <i class="icon-emb icon-emb-power-cord"></i> Disconnect
                         </button>
                         <button class="code-snippet-command" data-bind="click: clearWsLogs"
                             aria-label="Clear logs">
                             <i class="icon-emb icon-emb-trash"></i> Clear logs
                         </button>
+                        <button class="code-snippet-command" data-bind="click: closeWs"
+                            aria-label="Close WS">
+                            <i class="icon-emb icon-emb-simple-remove"></i> Close WS
+                        </button>
                     </div>
                 </div>
             </div>
             
+            <!-- ko if: wsConnected -->
             <spinner class="gql-ws-spinner"></spinner>
-            <div class="response-ws table-ws-gql logs">
+            <!-- /ko -->
+            <div class="response-ws table-ws-gql logs" data-bind="css: {'with-spinner': wsConnected}">
                 <div class="d-contents" role="rowgroup">
                     <div class="d-contents" role="row">
                         <div role="columnheader" class="table-preset-head">Time</div>
