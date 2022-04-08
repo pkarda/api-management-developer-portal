@@ -670,6 +670,10 @@ export class GraphqlConsole {
                 this.wsLogItems.unshift(data);
             }
         };
+        this.ws.onError = (error: any) => {
+            this.wsProcessing(false);
+            this.wsConnected(false);
+        }
     }
 
     private editorValidations(): void {
