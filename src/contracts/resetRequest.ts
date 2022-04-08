@@ -1,7 +1,7 @@
 /**
  * Cotract of Reset password request
  */
-export interface ResetRequest {
+export interface ResetPasswordRequest {
     solution: string;
     token: string;
     type: string;

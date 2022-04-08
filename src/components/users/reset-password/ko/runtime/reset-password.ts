@@ -5,7 +5,7 @@ import template from "./reset-password.html";
 import { EventManager } from "@paperbits/common/events";
 import { Component, RuntimeComponent, OnMounted, Param } from "@paperbits/common/ko/decorators";
 import { UsersService } from "../../../../../services/usersService";
-import { ResetRequest } from "../../../../../contracts/resetRequest";
+import { ResetPasswordRequest } from "../../../../../contracts/resetRequest";
 import { ValidationReport } from "../../../../../contracts/validationReport";
 import { BackendService } from "../../../../../services/backendService";
 
@@ -111,7 +111,7 @@ export class ResetPassword {
             this.working(true);
             
             if (isCaptcha) {
-                const resetRequest: ResetRequest = {
+                const resetRequest: ResetPasswordRequest = {
                     solution: captchaSolution,
                     flowId: captchaFlowId,
                     token: captchaToken,

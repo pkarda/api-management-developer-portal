@@ -39,10 +39,10 @@ export class SignupViewModelBinder implements ViewModelBinder<SignupModel, Signu
 
         const isDelegationEnabled = await this.tenantService.isDelegationEnabled();
         if (isDelegationEnabled) {
-            const delegationParam = {};
-            delegationParam[DelegationParameters.ReturnUrl] =  "/";
+            const delegationParam: Bag<string> = {};
+            delegationParam[DelegationParameters.ReturnUrl] = "/";
 
-            const delegationUrl = await this.backendService.getDelegationUrl(DelegationAction.signUp, delegationParam);
+            const delegationUrl = await this.backendService.getDelegationActionUrl(DelegationAction.signUp, delegationParam);
             if (delegationUrl) {
                 params["delegationUrl"] = delegationUrl;
             }
@@ -52,7 +52,7 @@ export class SignupViewModelBinder implements ViewModelBinder<SignupModel, Signu
         if (termsOfService.text) params["termsOfUse"] = termsOfService.text;
         if (termsOfService.consentRequired) params["isConsentRequired"] = termsOfService.consentRequired;
         if (termsOfService.enabled) params["termsEnabled"] = termsOfService.enabled;
-        
+
         if (Object.keys(params).length !== 0) {
             const runtimeConfig = JSON.stringify(params);
             viewModel.runtimeConfig(runtimeConfig);

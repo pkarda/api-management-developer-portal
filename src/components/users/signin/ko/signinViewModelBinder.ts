@@ -12,14 +12,14 @@ import { SigninViewModel } from "./signinViewModel";
 
 
 export class SigninViewModelBinder implements ViewModelBinder<SigninModel, SigninViewModel> {
-    
+
     constructor(
-        private readonly eventManager: EventManager, 
+        private readonly eventManager: EventManager,
         private readonly tenantService: TenantService,
         private readonly backendService: BackendService,
-        private readonly identityService: IdentityService) {}
+        private readonly identityService: IdentityService) { }
 
-    
+
     public async getTermsOfService(): Promise<TermsOfService> {
         const identitySetting = await this.identityService.getIdentitySetting();
         return identitySetting.properties.termsOfService;
@@ -44,11 +44,11 @@ export class SigninViewModelBinder implements ViewModelBinder<SigninModel, Signi
         const params = {};
 
         const isDelegationEnabled = await this.tenantService.isDelegationEnabled();
-        
+
         if (isDelegationEnabled) {
-            const delegationParam = {};
-            delegationParam[DelegationParameters.ReturnUrl] =  "/";
-            const delegationUrl = await this.backendService.getDelegationUrl(DelegationAction.signIn, delegationParam);
+            const delegationParam: Bag<string> = {};
+            delegationParam[DelegationParameters.ReturnUrl] = "/";
+            const delegationUrl = await this.backendService.getDelegationActionUrl(DelegationAction.signIn, delegationParam);
 
             if (delegationUrl) {
                 params["delegationUrl"] = delegationUrl;
