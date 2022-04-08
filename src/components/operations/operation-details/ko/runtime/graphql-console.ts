@@ -670,7 +670,7 @@ export class GraphqlConsole {
                 this.wsLogItems.unshift(data);
             }
         };
-        this.ws.onError = (error: any) => {
+        this.ws.onError = (error: string) => {
             this.wsProcessing(false);
             this.wsConnected(false);
         }
